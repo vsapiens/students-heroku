@@ -1,5 +1,4 @@
 exports.DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "mongodb+srv://admin:admin@cluster0-qj4rz.mongodb.net/university?retryWrites=true&w=majority";
+  process.env.DATABASE_URL || "mongodb://localhost/university";
 
 exports.PORT = process.env.PORT || 8080;

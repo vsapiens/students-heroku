@@ -2,11 +2,21 @@ let express = require("express");
 let morgan = require("morgan");
 let bodyParser = require("body-parser");
 let jsonParser = bodyParser.json();
+
+//Base de datos
 let mongoose = require("mongoose");
 let { StudentList } = require("./model");
 let { DATABASE_URL, PORT } = require("./config");
+//Autenticación
+let jwt = require("jsonwebtoken");
 
+//Encriptación
+let passport = require("passport");
+let bcrypt = require("bcrypt");
+
+let server;
 let app = express();
+
 app.use(express.static("public"));
 app.use(morgan("dev"));
 
@@ -45,7 +55,6 @@ app.get("/api/getById", (req, res) => {
       return res.status(404).send();
     });
 });
-
 app.get("/api/getByName/:name", (req, res) => {
   let name = req.params.name;
 
@@ -62,7 +71,6 @@ app.get("/api/getByName/:name", (req, res) => {
     return res.status(404).send();
   }
 });
-
 app.post("/api/newStudent", jsonParser, (req, res) => {
   let student = req.body;
   if (Object.keys(student).length !== 3) {
@@ -90,7 +98,35 @@ app.post("/api/newStudent", jsonParser, (req, res) => {
     }
   });
 });
+app.post("/api/login", jsonParser, (req, res) => {
+  let user = req.body.user;
+  let password = req.body.password;
+  //validar usuario en la base de datos
+  let data = {
+    user,
+    password
+  };
+  let token = jwt.sign(data, "secret", {
+    expiresIn: 60 * 5
+  });
+  console.log(token);
+  return res.status(200).json({ token });
+});
+app.get("/api/validate", (req, res) => {
+  console.log(req.headers);
+  let token = req.headers.authorization;
+  token = token.replace("Bearer ", "");
 
+  //poner variable de ambiente
+  jwt.verify(token, "secret", (err, user) => {
+    if (err) {
+      res.statusMessage = "Token not valid";
+      return res.status(400).send();
+    }
+    console.log(user);
+    return res.status(200).json({ message: "Éxito" });
+  });
+});
 app.put("/api/updateStudent/:id", (req, res) => {
   let student = req.body;
   //TODO: Verificar que tenga matricula y otras 2 propiedades
@@ -126,7 +162,28 @@ app.get("/api/students", (req, res) => {
     });
 });
 
-let server;
+//Register
+let password = "secret";
+let username = "alfredo";
+bcrypt.hash(password, 10).then(hashpassword => {
+  return UserList.create({ username, password: hashpassword }).then(user => {
+    return user;
+  });
+});
+//Login
+let passParam = "secret";
+let username = "alfredo";
+
+Users.find({ username })
+  .then(user => {
+    let hashpassword = user.password;
+    return bcrypt.compare(passParam, hashpassword);
+  })
+  .then(ok => {
+    if (ok) return user;
+    else throw new Error("");
+  });
+
 function runServer(port, databaseUrl) {
   return new Promise((resolve, reject) => {
     mongoose.connect(databaseUrl, response => {
